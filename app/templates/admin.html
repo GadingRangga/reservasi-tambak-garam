@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - Reservasi Wisata Tambak Garam</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <header class="navbar">
+        <div class="container nav-content">
+            <h1>Panel Admin Tambak Garam</h1>
+            <nav>
+                <a href="{{ url_for('index') }}">Pengunjung</a>
+                <a href="{{ url_for('admin') }}" class="active">Panel Admin</a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="container">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <div class="grid-two">
+            <section class="card">
+                <h3>Pengaturan Kapasitas Harian</h3>
+                <form action="{{ url_for('admin_update_settings') }}" method="POST" class="inline-form">
+                    <input type="number" name="max_daily_capacity" min="1"
+                           value="{{ settings.max_daily_capacity }}" required>
+                    <button type="submit" class="btn btn-primary">Simpan Kuota</button>
+                </form>
+                <p class="helper-text">
+                    Total peserta terdaftar (aktif{% if filter_date %} pada {{ filter_date }}{% endif %}):
+                    <strong>{{ active_participants }} orang</strong>
+                </p>
+            </section>
+
+            <section class="card">
+                <h3>Filter Tanggal & Ekspor Data</h3>
+                <form action="{{ url_for('admin') }}" method="GET" class="inline-form">
+                    <input type="date" name="date" value="{{ filter_date }}">
+                    <button type="submit" class="btn btn-secondary">Filter</button>
+                    <a href="{{ url_for('admin') }}" class="btn btn-outline">Reset</a>
+                </form>
+                <div class="mt-1">
+                    <a href="{{ url_for('admin_export') }}" class="btn btn-success">Unduh Rekap Excel (.xlsx)</a>
+                </div>
+            </section>
+        </div>
+
+        <section class="card">
+            <h3>Daftar Reservasi</h3>
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Kode</th>
+                            <th>Pengunjung</th>
+                            <th>Tanggal</th>
+                            <th>Peserta</th>
+                            <th>Total Biaya</th>
+                            <th>Status</th>
+                            <th>Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for r in reservations %}
+                        <tr>
+                            <td><strong>{{ r.booking_code }}</strong></td>
+                            <td>{{ r.visitor_name }}<br><small>{{ r.visitor_email }}</small></td>
+                            <td>{{ r.visit_date.isoformat() }}</td>
+                            <td>{{ r.participants }} orang</td>
+                            <td>Rp{{ "{:,}".format(r.total_price).replace(",", ".") }}</td>
+                            <td><span class="badge badge-{{ r.status }}">{{ r.status | upper }}</span></td>
+                            <td class="action-cell">
+                                {% if r.status == 'cancelled' %}
+                                    <span class="helper-text">Tidak ada aksi</span>
+                                {% else %}
+                                    {% if r.status == 'pending' %}
+                                    <form action="{{ url_for('admin_update_status', res_id=r.id) }}" method="POST">
+                                        <input type="hidden" name="status" value="approved">
+                                        <button type="submit" class="btn btn-sm btn-success">Setujui</button>
+                                    </form>
+                                    {% endif %}
+                                    <form action="{{ url_for('admin_update_status', res_id=r.id) }}" method="POST">
+                                        <input type="hidden" name="status" value="cancelled">
+                                        <button type="submit" class="btn btn-sm btn-danger">Batalkan</button>
+                                    </form>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="7" class="text-center">Belum ada data reservasi.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+</body>
+</html>

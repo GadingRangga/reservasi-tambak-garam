@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reservasi Wisata Tambak Garam</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <header class="navbar">
+        <div class="container nav-content">
+            <h1>Wisata Edukasi Tambak Garam</h1>
+            <nav>
+                <a href="{{ url_for('index') }}" class="active">Pengunjung</a>
+                <a href="{{ url_for('admin') }}">Panel Admin</a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="container">
+        <section class="hero card">
+            <h2>Jelajahi Proses Pembuatan Garam Tradisional</h2>
+            <p>
+                Nikmati tur edukatif langsung di hamparan tambak garam, mulai dari proses penguapan air laut
+                hingga panen kristal garam bersama petani lokal.
+            </p>
+            <div class="info-grid">
+                <div class="info-box">
+                    <span class="label">Harga Tiket</span>
+                    <strong>Rp{{ "{:,}".format(settings.ticket_price).replace(",", ".") }} / orang</strong>
+                </div>
+                <div class="info-box">
+                    <span class="label">Durasi Kunjungan</span>
+                    <strong>{{ settings.visit_duration_hours }} Jam</strong>
+                </div>
+                <div class="info-box">
+                    <span class="label">Kuota Harian</span>
+                    <strong>{{ settings.max_daily_capacity }} Orang / hari</strong>
+                </div>
+            </div>
+        </section>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <div class="grid-two">
+            <section class="card">
+                <h3>Buat Reservasi Kunjungan</h3>
+                <form action="{{ url_for('reserve') }}" method="POST" id="reservation-form"
+                      data-price="{{ settings.ticket_price }}">
+                    <div class="form-group">
+                        <label for="visitor_name">Nama Lengkap</label>
+                        <input type="text" id="visitor_name" name="visitor_name" required placeholder="Masukkan nama lengkap">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="visitor_email">Email</label>
+                        <input type="email" id="visitor_email" name="visitor_email" required placeholder="nama@email.com">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="visit_date">Tanggal Kunjungan (Minimal Besok)</label>
+                        <input type="date" id="visit_date" name="visit_date" min="{{ min_date }}" required>
+                        <small id="quota-info" class="helper-text">Pilih tanggal untuk melihat sisa kuota harian.</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="participants">Jumlah Peserta</label>
+                        <input type="number" id="participants" name="participants" min="1" value="1" required>
+                    </div>
+
+                    <div class="summary-box">
+                        <span>Estimasi Total Biaya:</span>
+                        <strong id="total-price-display">
+                            Rp{{ "{:,}".format(settings.ticket_price).replace(",", ".") }}
+                        </strong>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">Pesan Sekarang</button>
+                </form>
+            </section>
+
+            <section class="card">
+                <h3>Cek atau Batalkan Reservasi</h3>
+                <form action="{{ url_for('index') }}" method="GET" class="inline-form">
+                    <input type="text" name="code" placeholder="Masukkan kode (misal: TG-A1B2C3)"
+                           value="{{ request.args.get('code', '') }}" required>
+                    <button type="submit" class="btn btn-secondary">Cari</button>
+                </form>
+
+                {% if lookup_error %}
+                    <div class="alert alert-error">{{ lookup_error }}</div>
+                {% endif %}
+
+                {% if found_reservation %}
+                    <div class="ticket-box">
+                        <div class="ticket-header">
+                            <strong>Kode: {{ found_reservation.booking_code }}</strong>
+                            <span class="badge badge-{{ found_reservation.status }}">
+                                {{ found_reservation.status | upper }}
+                            </span>
+                        </div>
+                        <p><strong>Nama:</strong> {{ found_reservation.visitor_name }}</p>
+                        <p><strong>Email:</strong> {{ found_reservation.visitor_email }}</p>
+                        <p><strong>Tanggal Kunjungan:</strong> {{ found_reservation.visit_date.isoformat() }}</p>
+                        <p><strong>Jumlah Peserta:</strong> {{ found_reservation.participants }} orang</p>
+                        <p><strong>Total Biaya:</strong> Rp{{ "{:,}".format(found_reservation.total_price).replace(",", ".") }}</p>
+
+                        {% if found_reservation.status != 'cancelled' %}
+                            <form action="{{ url_for('cancel_reservation', booking_code=found_reservation.booking_code) }}"
+                                  method="POST" class="mt-1">
+                                <button type="submit" class="btn btn-danger">Batalkan Reservasi</button>
+                            </form>
+                        {% endif %}
+                    </div>
+                {% endif %}
+            </section>
+        </div>
+    </main>
+
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>
