@@ -1,0 +1,33 @@
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: tambak-garam-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-tambak_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-tambak_pass}
+      POSTGRES_DB: ${POSTGRES_DB:-reservasi_tambak}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-tambak_user} -d ${POSTGRES_DB:-reservasi_tambak}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  web:
+    image: ${APP_IMAGE:-reservasi-tambak-garam:local}
+    build: .
+    container_name: tambak-garam-web
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "${APP_PORT:-8080}:5000"
+    environment:
+      DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:-tambak_user}:${POSTGRES_PASSWORD:-tambak_pass}@db:5432/${POSTGRES_DB:-reservasi_tambak}
+      SECRET_KEY: ${SECRET_KEY:-prod-secret-tambak-garam-2026}
+
+volumes:
+  pgdata:
